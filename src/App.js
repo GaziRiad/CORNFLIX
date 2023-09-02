@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import Header from "./Header";
 
 const API_KEY = "db3cf4891cc843bd89f697bffe4118cc";
 
@@ -30,8 +31,4 @@ export default function App() {
       <Header />
     </div>
   );
-}
-
-function Header() {
-  return <header className="text-blue-700 font-bold">CORNFLIX</header>;
 }
