@@ -2,6 +2,10 @@ import { useEffect, useState } from "react";
 import Header from "./Header";
 import FeaturedMovie from "./FeaturedMovie";
 
+import { LoadingSpinner } from "./LoadingSpinner";
+import { Movies } from "./Movies";
+import { Search } from "./Search";
+
 export const API_KEY = "db3cf4891cc843bd89f697bffe4118cc";
 
 // fetch POPULAR
@@ -9,71 +13,115 @@ export const API_KEY = "db3cf4891cc843bd89f697bffe4118cc";
 //   `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&include_adult=true&include_video=false&language=en-US&page=1&sort_by=popularity.desc`
 // );
 
-// fetch MOVIE
+// fetch MOVIE by ID
 // const res = await fetch(
 //   `https://api.themoviedb.org/3/movie/654865?api_key=${API_KEY}&language=en-US`
 // );
+
+// fetch per QUERY
+// https://api.themoviedb.org/3/search/keyword?page=1
 
 export const baseImageUrl = "https://image.tmdb.org/t/p/";
 
 export default function App() {
   const [featuredMovie, setFeaturedMovie] = useState({});
-  const [Movies, setPopularMovies] = useState([]);
+  const [popularMovies, setPopularMovies] = useState([]);
+  const [query, setQuery] = useState("");
+  const [searchedMovies, setSearchedMovies] = useState([]);
 
-  useEffect(() => {
+  const [selectedMovie, setSelectedMovie] = useState({});
+
+  const [isLoading, setIsLoading] = useState(false);
+
+  function handleSelectedMovie(id) {
     async function fetchMovie() {
       try {
         const res = await fetch(
-          `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&include_adult=true&include_video=false&language=en-US&page=1&sort_by=popularity.desc`
+          `https://api.themoviedb.org/3/movie/${id}?api_key=${API_KEY}&language=en-US`
         );
+
         const data = await res.json();
-        const featured = data.results[0];
-        setFeaturedMovie(featured);
-        setPopularMovies(data.results);
         console.log(data);
+        setSelectedMovie(data);
       } catch (err) {
         console.error(err);
       }
     }
     fetchMovie();
-  }, [setFeaturedMovie, setPopularMovies]);
+  }
+
+  useEffect(() => {
+    setSearchedMovies([]);
+    if (query.length !== 0) return;
+    async function fetchMovie() {
+      try {
+        setIsLoading(true);
+        const res = await fetch(
+          `https://api.themoviedb.org/3/discover/movie?api_key=${API_KEY}&include_adult=false&include_video=true&language=en-US&page=1&sort_by=popularity.desc`
+        );
+        const data = await res.json();
+        const featured = data.results[0];
+        setFeaturedMovie(featured);
+        setPopularMovies(data.results);
+        setIsLoading(false);
+        console.log(data.results);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    fetchMovie();
+  }, [query]);
+
+  useEffect(() => {
+    async function fetchSearchedMovie() {
+      try {
+        if (query.length < 3) return;
+        setIsLoading(true);
+        const res = await fetch(
+          `https://api.themoviedb.org/3/search/movie?query=${query}&include_adult=false&language=en-US&page=1`,
+          {
+            method: "GET",
+            headers: {
+              accept: "application/json",
+              Authorization:
+                "Bearer eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJkYjNjZjQ4OTFjYzg0M2JkODlmNjk3YmZmZTQxMThjYyIsInN1YiI6IjY0ZjMyMGNhMWYzMzE5MDBjNmY1YWMxNSIsInNjb3BlcyI6WyJhcGlfcmVhZCJdLCJ2ZXJzaW9uIjoxfQ.FCXyUBhAiYprwNE9P7i49SRp-O3qzOLit5IzwzPyWE4",
+            },
+          }
+        );
+
+        const data = await res.json();
+        setSearchedMovies(data.results);
+        setIsLoading(false);
+      } catch (err) {
+        console.error(err);
+      }
+    }
+    fetchSearchedMovie();
+  }, [query]);
+
   return (
     <div>
-      <Header />
-      <FeaturedMovie movie={featuredMovie} />
-      <PopularMovies movies={Movies} />
+      <Header>
+        <Search query={query} setQuery={setQuery} />
+      </Header>
+
+      {searchedMovies.length > 0 && (
+        <Movies movies={searchedMovies} onClick={handleSelectedMovie} />
+      )}
+      {isLoading && searchedMovies.length === 0 ? (
+        <LoadingSpinner />
+      ) : !isLoading && searchedMovies.length === 0 ? (
+        <>
+          <FeaturedMovie movie={featuredMovie} />
+          <Movies movies={popularMovies} onClick={handleSelectedMovie} />
+        </>
+      ) : (
+        ""
+      )}
     </div>
   );
 }
 
-function PopularMovies({ movies }) {
-  return (
-    <div className=" w-[70%] mx-auto py-12">
-      <h2 className=" font-bold text-[#000411] uppercase text-xl mb-6">
-        Popular movies
-      </h2>
-      <div className=" grid grid-cols-1 gap-x-10 gap-y-10 md:grid-cols-5">
-        {movies &&
-          movies.map((movie) => {
-            return (
-              <div
-                key={movie.id}
-                className=" w-[100%] h-96 rounded-md overflow-hidden  text-white hover:brightness-75 duration-500 cursor-pointer"
-              >
-                <img
-                  src={`${baseImageUrl}w400${movie.poster_path}`}
-                  alt=""
-                  className="h-[80%] w-[100%]"
-                />
-                <p className="h-[20%] text-center bg-slate-900 p-4">
-                  {movie.title.split(" ").length > 6
-                    ? movie.title.split(" ").slice(0, 4).join(" ") + " ..."
-                    : movie.title}
-                </p>
-              </div>
-            );
-          })}
-      </div>
-    </div>
-  );
+function SelectedMovie() {
+  return <div></div>;
 }
